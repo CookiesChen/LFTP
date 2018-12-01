@@ -38,14 +38,12 @@ public class FileIO {
         }
     }
 
-    public static void byteToFile(String path, List<byte[]> datas) {
+    public static void byteToFile(FileOutputStream outputStream, List<byte[]> datas) {
         try {
-            FileOutputStream outputStream  = new FileOutputStream(new File(path));
             for (byte[] data : datas) {
                 outputStream.write(data);
                 outputStream.flush();
             }
-            outputStream.close();
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -12,16 +12,19 @@ public class SendThread implements Runnable{
 
     private int desPort;         // 接收方端口
     private volatile int base = 0;        // 基序号
-    private int nextseqnum = 0;  // 下一个序号
+    private volatile int nextseqnum = 0;  // 下一个序号
     private InetAddress IP;      // 目标IP
-    private long time;           // 记录时间用于定时器
+    private volatile long time;           // 记录时间用于定时器
+    private volatile int rwnd = 500;          // 接收窗口
 
     private volatile  boolean ReSend = false;
     private List<byte[]> datas;
 
     private DatagramSocket datagramSocket; // 发送方socket
 
-    private final int N = 10;
+    private final int N = 100;
+
+
 
     public SendThread(DatagramSocket datagramSocket, int desPort, List<byte[]> datas, InetAddress IP){
         this.datagramSocket = datagramSocket;
@@ -40,7 +43,12 @@ public class SendThread implements Runnable{
 
         while(nextseqnum < datas.size()) {
             if(nextseqnum < base + N && !ReSend) {
-                TCPPackage tcpPackage = new TCPPackage(0, false, nextseqnum, ACTION_SEND, datas.get(nextseqnum));
+                TCPPackage tcpPackage;
+                if (rwnd <= 0){
+                    tcpPackage = new TCPPackage(0, false, -1, ACTION_SEND, null);
+                } else {
+                    tcpPackage = new TCPPackage(0, false, nextseqnum, ACTION_SEND, datas.get(nextseqnum));
+                }
                 byte[] bytes = Convert.PackageToByte(tcpPackage);
                 DatagramPacket packet = new DatagramPacket(bytes, bytes.length, IP , desPort);
                 try {
@@ -54,6 +62,10 @@ public class SendThread implements Runnable{
                 nextseqnum++;
             }
         }
+
+        // 阻塞等待最后传输完成
+        while (base < datas.size());
+
         // Send FIN
         TCPPackage tcpPackage = new TCPPackage(0, true, nextseqnum, ACTION_SEND, null);
         byte[] bytes = Convert.PackageToByte(tcpPackage);
@@ -81,6 +93,7 @@ public class SendThread implements Runnable{
                     e.printStackTrace();
                 }
                 assert ACKPackage != null;
+                rwnd = Convert.byteArrayToInt(ACKPackage.Data());
                 if(ACKPackage.FIN()){
                     System.out.println("Send finish. Close in 10s");
                     break;

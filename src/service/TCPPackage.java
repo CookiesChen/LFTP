@@ -17,6 +17,13 @@ public class TCPPackage implements Serializable {
         this.data = data;
     }
 
+    public void setData(byte[] data) {
+        this.data = new byte[data.length];
+        for(int i = 0; i < data.length; i++){
+            this.data[i] = data[i];
+        }
+    }
+
     public boolean action() {
         return action;
     }
@@ -25,7 +32,7 @@ public class TCPPackage implements Serializable {
         return data;
     }
 
-    public int ACK() {
+    int ACK() {
         return ACK;
     }
 

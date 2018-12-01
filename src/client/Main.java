@@ -20,8 +20,6 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
 
-
-
         boolean action = ACTION_SEND;
         IP = InetAddress.getLocalHost();
         if(action == ACTION_SEND){
