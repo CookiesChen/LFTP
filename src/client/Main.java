@@ -1,50 +1,60 @@
 package client;
 
-import service.Convert;
-import service.NetSocket;
+import service.*;
 
 import java.io.IOException;
-import java.net.*;
-import java.util.Random;
-import service.TCPPackage;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.util.List;
 
 public class Main {
+
+    public static final boolean ACTION_SEND  = true;
+    public static final boolean ACTION_GET  = false;
+    private static InetAddress IP;   // 服务器IP
+
+    private static DatagramSocket datagramSocket;
+
+    private static List<byte[]> datas = FileIO.fileToByte("./src/test/Over the Horizon.mp3");
+
     public static void main(String[] args) throws IOException {
-        sentPackage();
+
+
+
+        boolean action = ACTION_SEND;
+        IP = InetAddress.getLocalHost();
+        if(action == ACTION_SEND){
+            datagramSocket = NetSocket.getFreePort();
+            TCPPackage data = new TCPPackage(0, false, 0, ACTION_SEND, null);
+            sendPackage(data, InetAddress.getLocalHost(), 9090);
+            System.out.println("[Client] Ask for sending file at port: " + datagramSocket.getLocalPort());
+            TCPPackage receivePackage = receivePackage();
+            // 服务器端口
+            int desPort = Convert.byteArrayToInt(receivePackage.Data());
+            System.out.println("[Client] Get Server port: " + desPort);
+            System.out.println("[Client] Start to send file");
+            SendThread sendThread = new SendThread(datagramSocket,desPort, datas, IP);
+
+            Thread sThread = new Thread(sendThread);
+            sThread.start();
+
+        } else if(action == ACTION_GET){
+
+        }
     }
 
-    private static void sentPackage() throws IOException {
-        DatagramSocket datagramSocket = new DatagramSocket();
+    private static TCPPackage receivePackage() throws IOException {
+        byte[] buf = new byte[1024];
+        DatagramPacket datagramPacket = new DatagramPacket(buf, buf.length); // 1024
+        datagramSocket.receive(datagramPacket);
+        return Convert.ByteToPackage(buf);
+    }
 
-        TCPPackage data = new TCPPackage(0, false,true, getClientSeq(), null);
-        byte[] bytes = Convert.PackageToByte(data);
-
-        DatagramPacket packet = new DatagramPacket(bytes, bytes.length, InetAddress.getLocalHost() , 9090);
+    private static void sendPackage(TCPPackage tcpPackage, InetAddress IP, int port) throws IOException {
+        byte[] bytes = Convert.PackageToByte(tcpPackage);
+        DatagramPacket packet = new DatagramPacket(bytes, bytes.length, IP , port);
         datagramSocket.send(packet);
-        datagramSocket.close();
     }
 
-    private static int getClientSeq(){
-        Random rand =new Random(25);
-        return rand.nextInt(100);
-    }
-
-    public static class ClientThread implements Runnable {
-
-        private NetSocket socket; // 客户空闲socket
-        private InetAddress IP;   // 服务器IP
-        private int port;         // 服务器口
-
-        ClientThread(NetSocket socket, InetAddress IP, int port){
-            this.socket = socket;
-            this.IP = IP;
-            this.port = port;
-        }
-
-        @Override
-        public void run() {
-            System.out.println("Receiver's IP: " + IP.getHostAddress());
-            System.out.println("Receiver's port: " + port);
-        }
-    }
 }

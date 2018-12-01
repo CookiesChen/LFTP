@@ -1,39 +1,22 @@
 package service;
 
 import java.io.IOException;
+import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Random;
 
 public class NetSocket {
-    private static Random random = new Random();
-
-    private Socket socket;
-
-    public static NetSocket custom() throws IOException {
-        return new NetSocket();
-    }
-
-    private NetSocket() throws IOException {
-        socket = new Socket();
-        InetSocketAddress inetAddress = new InetSocketAddress(0);
-        socket.bind(inetAddress);
-    }
-
-    public void freePort() throws IOException {
-        if (null == socket || socket.isClosed()) {
-            return;
+    public static DatagramSocket getFreePort() {
+        DatagramSocket socket = null;
+        for(int i = 5001; i < 65535; i++){
+            try {
+                socket = new DatagramSocket(i);
+            } catch (IOException ex) {
+                continue; // try next port
+            }
+            break;
         }
-
-        socket.close();
+        return socket;
     }
-
-    int getPort() {
-        if (null == socket || socket.isClosed()) {
-            return -1;
-        }
-
-        return socket.getLocalPort();
-    }
-
 }
