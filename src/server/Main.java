@@ -42,10 +42,13 @@ public class Main {
         private TCPPackage clientAction; // 客户端动作
         DatagramSocket datagramSocket;   // socket
 
-        private final int RevBuff = 500; // 接收缓存
-        private volatile int rwnd = 500;          // 接收窗口
+        private final int RevBuff = 20000; // 接收缓存
+        private volatile int rwnd = RevBuff; // 接收窗口
 
-        private int expectedSeqNum = 0;
+        private int expectedSeqNum = 0;  // GBN控制
+
+        private long startTime = 0;      // 下载速度计算
+        private int count = 0;
 
         ServerThread(InetAddress IP, int port, TCPPackage clientAction){
             this.IP = IP;
@@ -73,6 +76,7 @@ public class Main {
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
                 }
+                startTime = System.currentTimeMillis();
                 while(true) {
                     TCPPackage receivePackage = null;
                     try {
@@ -94,10 +98,14 @@ public class Main {
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
+                        System.out.println();
                         System.out.println("Receive file finish.");
                         break;
                     }
                     if(receivePackage.Seq() == expectedSeqNum) {
+                        count++;
+                        long downloadTime = (System.currentTimeMillis() - startTime + 1);
+                        System.out.print("\r" + count * 1024 / downloadTime + "KB/s in " + downloadTime / 1000 + "s" );
                         rwnd--;
                         datas.add(receivePackage.Data());
                         replyACK = new TCPPackage(expectedSeqNum, false, 0, true, Convert.intToByteArray(rwnd));
