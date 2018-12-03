@@ -1,14 +1,16 @@
 package service;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class FileIO {
 
-    static final int MAX_BYTE = 1024;	//每个byte[]的容量,当前1Kb
+    static final int MAX_BYTE = 1024;	                   // 每个byte[]的容量,当前1Kb
+    private final static int BLOCK_SIZE = 1024 * 1024 * 10;
+    final static int BLOCK_PACKAGE_NUM = BLOCK_SIZE / MAX_BYTE; // 每块package数
+    private static int packageTotal;
+    private static long bytesTotal;
 
     public static List<byte[]> fileToByte(String path) {
         try {
@@ -49,4 +51,48 @@ public class FileIO {
         }
     }
 
+    // 获得总bytes
+    static long getByteTotal(String path) throws IOException {
+        File file = new File(path);
+        bytesTotal = file.length();
+        return bytesTotal;
+    }
+
+    // 获得总package
+    static int getPackageTotal(String path) throws IOException {
+        File file = new File(path);
+        long BytesTotal = file.length();
+        packageTotal = (int)Math.floor(BytesTotal / MAX_BYTE) + 1;
+        return packageTotal;
+    }
+    // 获得对应分隔文件块
+    static List<byte[]> getByteList(int blockNum, String path){
+        List<byte[]> ByteList = new ArrayList<>();
+        try {
+            FileInputStream inStream = new FileInputStream(new File(path));
+            for(int i = 0; i < blockNum; i++){
+                inStream.skip(BLOCK_SIZE);
+            }
+            if((blockNum + 1) * BLOCK_PACKAGE_NUM >  packageTotal){
+                int len = packageTotal % BLOCK_PACKAGE_NUM;
+                for (int i = 0; i < len - 1; i++){
+                    byte[] data = new byte[MAX_BYTE];
+                    inStream.read(data, 0, MAX_BYTE);
+                    ByteList.add(data);
+                }
+                byte[] data = new byte[(int) (bytesTotal % MAX_BYTE)];
+                inStream.read(data, 0, (int) (bytesTotal % MAX_BYTE));
+                ByteList.add(data);
+            } else{
+                for (int i = 0; i < BLOCK_PACKAGE_NUM; i++){
+                    byte[] data = new byte[MAX_BYTE];
+                    inStream.read(data, 0, MAX_BYTE);
+                    ByteList.add(data);
+                }
+            }
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        return ByteList;
+    }
 }

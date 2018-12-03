@@ -45,7 +45,7 @@ public class Main {
         private final int RevBuff = 20000; // 接收缓存
         private volatile int rwnd = RevBuff; // 接收窗口
 
-        private int expectedSeqNum = 0;  // GBN控制
+        private volatile int expectedSeqNum = 0;  // GBN控制
 
         private long startTime = 0;      // 下载速度计算
         private int count = 0;
@@ -72,7 +72,7 @@ public class Main {
                 TCPPackage replyACK = null;
                 FileOutputStream outputStream = null;
                 try {
-                    outputStream  = new FileOutputStream(new File("./src/test/out.mp3"));
+                    outputStream  = new FileOutputStream(new File("./src/test/out.zip"));
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
                 }
@@ -104,12 +104,12 @@ public class Main {
                     }
                     if(receivePackage.Seq() == expectedSeqNum) {
                         count++;
-                        long downloadTime = (System.currentTimeMillis() - startTime + 1);
-                        System.out.print("\r" + count * 1024 / downloadTime + "KB/s in " + downloadTime / 1000 + "s" );
                         rwnd--;
                         datas.add(receivePackage.Data());
                         replyACK = new TCPPackage(expectedSeqNum, false, 0, true, Convert.intToByteArray(rwnd));
                         expectedSeqNum++;
+                        long downloadTime = (System.currentTimeMillis() - startTime + 1);
+                        System.out.print("\r" + count * 1024 / downloadTime + "KB/s in " + downloadTime / 1000 + "s" );
                         try {
                             replyACK.setData(Convert.intToByteArray(rwnd));
                             sendPackage(replyACK);

@@ -16,7 +16,6 @@ public class Main {
 
     private static DatagramSocket datagramSocket;
 
-    private static List<byte[]> datas = FileIO.fileToByte("./src/test/Over the Horizon.mp3");
 
     public static void main(String[] args) throws IOException {
 
@@ -32,7 +31,7 @@ public class Main {
             int desPort = Convert.byteArrayToInt(receivePackage.Data());
             System.out.println("[Client] Get Server port: " + desPort);
             System.out.println("[Client] Start to send file");
-            SendThread sendThread = new SendThread(datagramSocket,desPort, datas, IP);
+            SendThread sendThread = new SendThread(datagramSocket,desPort, IP);
 
             Thread sThread = new Thread(sendThread);
             sThread.start();

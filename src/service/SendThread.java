@@ -4,9 +4,11 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.List;
 
 import static client.Main.ACTION_SEND;
+import static service.FileIO.BLOCK_PACKAGE_NUM;
 
 public class SendThread implements Runnable{
 
@@ -23,58 +25,80 @@ public class SendThread implements Runnable{
     /* Congestion control*/
     private static final int SLOW_START = 0;        // 慢启动
     private static final int CONGESTION_AVOID = 1;  // 拥塞避免
-    private static final int QUICK_RECOVERY = 2;    // 快速恢复
     private volatile int state = SLOW_START;        // 拥塞控制状态
-    private volatile double cwnd = 1;               // 拥塞窗口
-    private volatile int lastACK = 0;               // 最后确认ACK
+    private double cwnd = 1.0;               // 拥塞窗口
+    private volatile int lastACK = -1;               // 最后确认ACK
     private volatile int duplicateACK = 0;          // 冗余ACK
-    private double ssthresh = 20;                   // 慢启动阈值
+    private volatile double ssthresh = 50;                   // 慢启动阈值
 
-    private List<byte[]> datas;
+    /* big file*/
+    private int packageTotal;					    // package总数
+    private long bytesTotal; 						// byte[]总数目
+    private volatile int blockCur = 0;				    // 当前块序号
+
+    private volatile List<TCPPackage> datas = new ArrayList<>();
 
     private DatagramSocket datagramSocket; // 发送方socket
 
 
 
-    public SendThread(DatagramSocket datagramSocket, int desPort, List<byte[]> datas, InetAddress IP){
+    public SendThread(DatagramSocket datagramSocket, int desPort, InetAddress IP){
         this.datagramSocket = datagramSocket;
         this.desPort = desPort;
-        this.datas = datas;
         this.IP =  IP;
     }
 
     @Override
     public void run() {
+
+        String path = "./src/test/r.zip";
+        try {
+            packageTotal = FileIO.getPackageTotal(path);
+            bytesTotal = FileIO.getByteTotal(path);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         Thread rThread = new Thread(new ReceiveACKThread());
         rThread.start();
 
         Thread tThread = new Thread(new TimeOut());
         tThread.start();
 
-        while(nextseqnum < datas.size()) {
-            if(nextseqnum < base + cwnd && !ReSend) {
-                TCPPackage tcpPackage;
-                if (rwnd <= 0){
-                    tcpPackage = new TCPPackage(0, false, -1, ACTION_SEND, null);
-                } else {
-                    tcpPackage = new TCPPackage(0, false, nextseqnum, ACTION_SEND, datas.get(nextseqnum));
-                }
-                byte[] bytes = Convert.PackageToByte(tcpPackage);
-                DatagramPacket packet = new DatagramPacket(bytes, bytes.length, IP , desPort);
-                try {
-                    datagramSocket.send(packet);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                if (base == nextseqnum){
-                    time = System.currentTimeMillis();
-                }
-                nextseqnum++;
+        System.out.println(Math.floor(packageTotal / (float) BLOCK_PACKAGE_NUM) + 1);
+
+        for (blockCur = 0; blockCur < Math.floor(packageTotal / (float) BLOCK_PACKAGE_NUM) + 1; blockCur++){
+            List<byte[]> byteList = FileIO.getByteList(blockCur, path);
+            datas.clear();
+            for(int j = 0; j < byteList.size(); j++) {
+                datas.add(new TCPPackage(0, false, blockCur*BLOCK_PACKAGE_NUM + j, true, byteList.get(j)));
             }
+            while(nextseqnum < datas.size() + blockCur * BLOCK_PACKAGE_NUM) {
+                if(nextseqnum < base + cwnd && !ReSend) {
+                    TCPPackage tcpPackage;
+                    if (rwnd <= 0){
+                        tcpPackage = new TCPPackage(0, false, -1, ACTION_SEND, null);
+                    } else {
+                        tcpPackage = datas.get(nextseqnum % BLOCK_PACKAGE_NUM);
+                    }
+                    byte[] bytes = Convert.PackageToByte(tcpPackage);
+                    DatagramPacket packet = new DatagramPacket(bytes, bytes.length, IP , desPort);
+                    try {
+                        datagramSocket.send(packet);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    if (base == nextseqnum){
+                        time = System.currentTimeMillis();
+                    }
+                    if (rwnd > 0) nextseqnum++;
+                }
+            }
+            while (lastACK < datas.size() - 1 + blockCur * BLOCK_PACKAGE_NUM) {}
         }
 
         // 阻塞等待最后传输完成
-        while (base < datas.size());
+        while (base < packageTotal);
 
         // Send FIN
         TCPPackage tcpPackage = new TCPPackage(0, true, nextseqnum, ACTION_SEND, null);
@@ -85,7 +109,6 @@ public class SendThread implements Runnable{
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     class ReceiveACKThread implements Runnable{
@@ -108,54 +131,32 @@ public class SendThread implements Runnable{
                     System.out.println("Send finish. Close in 10s");
                     break;
                 }
-                switch (state){
-                    case SLOW_START:
-                        if(lastACK >= ACKPackage.ACK()){
-                            duplicateACK++;
-                        } else {
-                            cwnd = cwnd + 1;
-                            duplicateACK = 0;
-                        }
-                        /* 状态转移*/
-                        if (duplicateACK == 3){
-                            ssthresh = cwnd / 2;
-                            cwnd = ssthresh + 3;
-                            state = QUICK_RECOVERY;
-                        }
-                        if (cwnd >= ssthresh){
-                            state = CONGESTION_AVOID;
-                        }
-                        break;
-                    case QUICK_RECOVERY:
-                        if(lastACK >= ACKPackage.ACK()){
-                            cwnd = cwnd + 1;
-                        } else {
-                            cwnd = ssthresh;
-                            duplicateACK = 0;
-                            state = CONGESTION_AVOID;
-                        }
-                        break;
-                    case CONGESTION_AVOID:
-                        if(lastACK >= ACKPackage.ACK()){
-                            duplicateACK++;
-                        } else {
-                            cwnd = cwnd + 1/cwnd;
-                            duplicateACK = 0;
-                        }
-                        /* 状态转移*/
-                        if (duplicateACK == 3){
-                            ssthresh = cwnd / 2;
-                            cwnd = ssthresh + 3;
-                            state = QUICK_RECOVERY;
-                        }
-                        break;
+                System.out.println(ACKPackage.ACK());
+                if (lastACK + 1 == ACKPackage.ACK()) {
+                    if (state == SLOW_START) {
+                        cwnd++;
+                        if (cwnd > ssthresh) state = CONGESTION_AVOID;
+                    }
+                    else {
+                        cwnd += (double)(1 / cwnd);
+                    }
+                    duplicateACK = 0;
+                }   else{
+                    duplicateACK++;
                 }
 
+                if (duplicateACK == 3) {
+                    ssthresh = cwnd / 2;
+                    cwnd = ssthresh + 3;
+                    state = CONGESTION_AVOID;
+                }
+
+                lastACK = ACKPackage.ACK();
                 base = ACKPackage.ACK() + 1;
                 if (base != nextseqnum){
                     time = System.currentTimeMillis();
                 }
-                if (ACKPackage.ACK() == datas.size()) break;
+                if (ACKPackage.ACK() == packageTotal - 1) break;
             }
         }
     }
@@ -167,18 +168,19 @@ public class SendThread implements Runnable{
         @Override
         public void run() {
             while(true){
-                if (base == datas.size()) break;
+                if (base == packageTotal - 1) break;
                 if(System.currentTimeMillis() - time > TTL){
                     ssthresh = cwnd/2;
-                    cwnd = 1;
-                    duplicateACK = 0;
+                    cwnd = ssthresh;
                     state = SLOW_START;
                     time = System.currentTimeMillis();
-                    System.out.println("[Client] ReSend. Package Num " + base + " - " + nextseqnum);
                     ReSend = true;
                     // 重发数据包
-                    for (int i = base; i < nextseqnum; i++){
-                        TCPPackage tcpPackage = new TCPPackage(0, false, i, ACTION_SEND, datas.get(i));
+                    int start = base;
+                    int end = nextseqnum;
+                    System.out.println("[Client] ReSend Num " + start + " " + end);
+                    for (int i = start; i < end; i++){
+                        TCPPackage tcpPackage = datas.get(i % BLOCK_PACKAGE_NUM);
                         byte[] bytes = Convert.PackageToByte(tcpPackage);
                         DatagramPacket packet = new DatagramPacket(bytes, bytes.length, IP , desPort);
                         try {
