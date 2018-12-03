@@ -38,26 +38,23 @@ public class SendThread implements Runnable{
 
     private volatile List<TCPPackage> datas = new ArrayList<>();
 
-    private DatagramSocket datagramSocket; // 发送方socket
+    private DatagramSocket datagramSocket; // socket
+    private String filename;
 
 
-
-    public SendThread(DatagramSocket datagramSocket, int desPort, InetAddress IP){
+    public SendThread(DatagramSocket datagramSocket, int desPort, InetAddress IP, String filename){
         this.datagramSocket = datagramSocket;
         this.desPort = desPort;
         this.IP =  IP;
+        this.filename = filename;
     }
 
     @Override
     public void run() {
 
-        String path = "./src/test/r.zip";
-        try {
-            packageTotal = FileIO.getPackageTotal(path);
-            bytesTotal = FileIO.getByteTotal(path);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        String path = "./src/test1/" + filename;
+        packageTotal = FileIO.getPackageTotal(path);
+        bytesTotal = FileIO.getByteTotal(path);
 
         Thread rThread = new Thread(new ReceiveACKThread());
         rThread.start();

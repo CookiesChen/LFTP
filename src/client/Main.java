@@ -19,25 +19,36 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
 
-        boolean action = ACTION_SEND;
+        String filename = "1.zip";
+        boolean action = ACTION_GET;
         IP = InetAddress.getLocalHost();
+        datagramSocket = NetSocket.getFreePort();
+        if(filename == null){
+            System.out.println("Empty file name");
+        }
+        TCPPackage data = new TCPPackage(0, false, 0, action, filename.getBytes());
+        sendPackage(data, IP, 9090);
         if(action == ACTION_SEND){
-            datagramSocket = NetSocket.getFreePort();
-            TCPPackage data = new TCPPackage(0, false, 0, ACTION_SEND, null);
-            sendPackage(data, InetAddress.getLocalHost(), 9090);
-            System.out.println("[Client] Ask for sending file at port: " + datagramSocket.getLocalPort());
+            System.out.println("[Client] Send file " + filename + " at local port: " + datagramSocket.getLocalPort());
+            // 等待服务器发回端口
             TCPPackage receivePackage = receivePackage();
-            // 服务器端口
             int desPort = Convert.byteArrayToInt(receivePackage.Data());
             System.out.println("[Client] Get Server port: " + desPort);
             System.out.println("[Client] Start to send file");
-            SendThread sendThread = new SendThread(datagramSocket,desPort, IP);
-
-            Thread sThread = new Thread(sendThread);
-            sThread.start();
+            SendThread sendThread = new SendThread(datagramSocket, desPort, IP, filename);
+            Thread thread = new Thread(sendThread);
+            thread.start();
 
         } else if(action == ACTION_GET){
-
+            System.out.println("[Client] Get file " + filename + " at local port: " + datagramSocket.getLocalPort());
+            // 等待服务器发回端口
+            TCPPackage receivePackage = receivePackage();
+            int desPort = Convert.byteArrayToInt(receivePackage.Data());
+            System.out.println("[Client] Get Server port: " + desPort);
+            System.out.println("[Client] Start to get file");
+            ReceiveThread receiveThread = new ReceiveThread(datagramSocket, IP, desPort, filename);
+            Thread thread = new Thread(receiveThread);
+            thread.start();
         }
     }
 

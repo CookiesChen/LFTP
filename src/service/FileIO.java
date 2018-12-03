@@ -52,14 +52,14 @@ public class FileIO {
     }
 
     // 获得总bytes
-    static long getByteTotal(String path) throws IOException {
+    static long getByteTotal(String path) {
         File file = new File(path);
         bytesTotal = file.length();
         return bytesTotal;
     }
 
     // 获得总package
-    static int getPackageTotal(String path) throws IOException {
+    static int getPackageTotal(String path) {
         File file = new File(path);
         long BytesTotal = file.length();
         packageTotal = (int)Math.floor(BytesTotal / MAX_BYTE) + 1;
