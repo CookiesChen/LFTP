@@ -1,4 +1,4 @@
-package service;
+package com.cookieschen.course.lftp.service;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -7,8 +7,8 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 
-import static client.Main.ACTION_SEND;
-import static service.FileIO.BLOCK_PACKAGE_NUM;
+import static com.cookieschen.course.lftp.client.Main.ACTION_SEND;
+import static com.cookieschen.course.lftp.service.FileIO.BLOCK_PACKAGE_NUM;
 
 public class SendThread implements Runnable{
 
@@ -41,6 +41,7 @@ public class SendThread implements Runnable{
     private DatagramSocket datagramSocket; // socket
     private String filename;
 
+    long startTime = 0;
 
     public SendThread(DatagramSocket datagramSocket, int desPort, InetAddress IP, String filename){
         this.datagramSocket = datagramSocket;
@@ -52,7 +53,7 @@ public class SendThread implements Runnable{
     @Override
     public void run() {
 
-        String path = "./src/test1/" + filename;
+        String path = "./out/" + filename;
         packageTotal = FileIO.getPackageTotal(path);
         bytesTotal = FileIO.getByteTotal(path);
 
@@ -62,16 +63,15 @@ public class SendThread implements Runnable{
         Thread tThread = new Thread(new TimeOut());
         tThread.start();
 
-        System.out.println(Math.floor(packageTotal / (float) BLOCK_PACKAGE_NUM) + 1);
-
+        startTime = System.currentTimeMillis();
         for (blockCur = 0; blockCur < Math.floor(packageTotal / (float) BLOCK_PACKAGE_NUM) + 1; blockCur++){
-            List<byte[]> byteList = FileIO.getByteList(blockCur, path);
+            List<byte[]> byteList = FileIO.getByteList(blockCur, path, packageTotal, bytesTotal);
             datas.clear();
             for(int j = 0; j < byteList.size(); j++) {
                 datas.add(new TCPPackage(0, false, blockCur*BLOCK_PACKAGE_NUM + j, true, byteList.get(j)));
             }
             while(nextseqnum < datas.size() + blockCur * BLOCK_PACKAGE_NUM) {
-                if(nextseqnum < base + cwnd && !ReSend) {
+                if(ReSend == false && nextseqnum < base + cwnd) {
                     TCPPackage tcpPackage;
                     if (rwnd <= 0){
                         tcpPackage = new TCPPackage(0, false, -1, ACTION_SEND, null);
@@ -88,12 +88,12 @@ public class SendThread implements Runnable{
                     if (base == nextseqnum){
                         time = System.currentTimeMillis();
                     }
-                    if (rwnd > 0) nextseqnum++;
+                    nextseqnum++;
                 }
             }
             while (lastACK < datas.size() - 1 + blockCur * BLOCK_PACKAGE_NUM) {}
         }
-
+        System.out.println("\n[Success] Send File.");
         // 阻塞等待最后传输完成
         while (base < packageTotal);
 
@@ -125,11 +125,13 @@ public class SendThread implements Runnable{
                 assert ACKPackage != null;
                 rwnd = Convert.byteArrayToInt(ACKPackage.Data());
                 if(ACKPackage.FIN()){
-                    System.out.println("Send finish. Close in 10s");
+                    System.out.println("[Client] Send finish. Close in 10s");
                     break;
                 }
-                System.out.println(ACKPackage.ACK());
                 if (lastACK + 1 == ACKPackage.ACK()) {
+                    System.out.print("\rSeep: " + (lastACK + 1)*1024/(System.currentTimeMillis() - startTime + 1) + "KB/s, Finished: "
+                            +  String.format("%.2f", ((float)(lastACK+1)/(float) packageTotal * 100)) + "%"
+                            + ", in " + (System.currentTimeMillis() - startTime + 1)/1000 + "s");
                     if (state == SLOW_START) {
                         cwnd++;
                         if (cwnd > ssthresh) state = CONGESTION_AVOID;
@@ -142,7 +144,7 @@ public class SendThread implements Runnable{
                     duplicateACK++;
                 }
 
-                if (duplicateACK == 3) {
+                if (duplicateACK >= 3) {
                     ssthresh = cwnd / 2;
                     cwnd = ssthresh + 3;
                     state = CONGESTION_AVOID;
@@ -165,17 +167,15 @@ public class SendThread implements Runnable{
         @Override
         public void run() {
             while(true){
-                if (base == packageTotal - 1) break;
+                if (base >= packageTotal - 1) break;
                 if(System.currentTimeMillis() - time > TTL){
-                    ssthresh = cwnd/2;
+                    ssthresh = cwnd/2 + 1;
                     cwnd = ssthresh;
                     state = SLOW_START;
-                    time = System.currentTimeMillis();
                     ReSend = true;
                     // 重发数据包
                     int start = base;
                     int end = nextseqnum;
-                    System.out.println("[Client] ReSend Num " + start + " " + end);
                     for (int i = start; i < end; i++){
                         TCPPackage tcpPackage = datas.get(i % BLOCK_PACKAGE_NUM);
                         byte[] bytes = Convert.PackageToByte(tcpPackage);
@@ -186,7 +186,6 @@ public class SendThread implements Runnable{
                             e.printStackTrace();
                         }
                     }
-                    System.out.println("[Client] ReSend Finish.");
                     ReSend = false;
                 }
             }

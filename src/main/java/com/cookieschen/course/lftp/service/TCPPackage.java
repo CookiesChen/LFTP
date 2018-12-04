@@ -1,4 +1,4 @@
-package service;
+package com.cookieschen.course.lftp.service;
 
 import java.io.*;
 
@@ -8,6 +8,10 @@ public class TCPPackage implements Serializable {
     private int seq;     // 序列号
     private boolean action; // 客户端动作
     private byte[] data; // 数据包
+
+    public TCPPackage(){
+
+    }
 
     public TCPPackage(int ACK, boolean FIN, int seq, boolean action, byte[] data){
         this.ACK = ACK;
@@ -36,11 +40,11 @@ public class TCPPackage implements Serializable {
         return ACK;
     }
 
-    public int Seq() {
+    int Seq() {
         return seq;
     }
 
-    public boolean FIN() {
+    boolean FIN() {
         return FIN;
     }
 }

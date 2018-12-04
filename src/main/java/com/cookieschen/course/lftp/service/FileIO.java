@@ -1,4 +1,4 @@
-package service;
+package com.cookieschen.course.lftp.service;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -9,8 +9,6 @@ public class FileIO {
     static final int MAX_BYTE = 1024;	                   // 每个byte[]的容量,当前1Kb
     private final static int BLOCK_SIZE = 1024 * 1024 * 10;
     final static int BLOCK_PACKAGE_NUM = BLOCK_SIZE / MAX_BYTE; // 每块package数
-    private static int packageTotal;
-    private static long bytesTotal;
 
     public static List<byte[]> fileToByte(String path) {
         try {
@@ -54,19 +52,17 @@ public class FileIO {
     // 获得总bytes
     static long getByteTotal(String path) {
         File file = new File(path);
-        bytesTotal = file.length();
-        return bytesTotal;
+        return  file.length();
     }
 
     // 获得总package
-    static int getPackageTotal(String path) {
+    public static int getPackageTotal(String path) {
         File file = new File(path);
         long BytesTotal = file.length();
-        packageTotal = (int)Math.floor(BytesTotal / MAX_BYTE) + 1;
-        return packageTotal;
+        return (int)Math.floor(BytesTotal / MAX_BYTE) + 1;
     }
     // 获得对应分隔文件块
-    static List<byte[]> getByteList(int blockNum, String path){
+    static List<byte[]> getByteList(int blockNum, String path,int packageTotal,long bytesTotal){
         List<byte[]> ByteList = new ArrayList<>();
         try {
             FileInputStream inStream = new FileInputStream(new File(path));

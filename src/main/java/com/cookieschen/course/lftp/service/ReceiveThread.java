@@ -1,4 +1,4 @@
-package service;
+package com.cookieschen.course.lftp.service;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -22,13 +22,15 @@ public class ReceiveThread implements Runnable {
     private volatile int expectedSeqNum = 0;  // GBN控制
 
     String filename;
+    long startTime;
+    int packageTotal;
 
-
-    public ReceiveThread(DatagramSocket datagramSocket, InetAddress IP, int port, String filename){
+    public ReceiveThread(DatagramSocket datagramSocket, InetAddress IP, int port, String filename, int packageTotal){
         this.datagramSocket = datagramSocket;
         this.IP = IP;
         this.port = port;
         this.filename = filename;
+        this.packageTotal = packageTotal;
     }
 
     @Override
@@ -37,10 +39,11 @@ public class ReceiveThread implements Runnable {
         TCPPackage replyACK = null;
         FileOutputStream outputStream = null;
         try {
-            outputStream  = new FileOutputStream(new File("./src/test/" + filename));
+            outputStream  = new FileOutputStream(new File("./out/test/" + filename));
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
+        startTime = System.currentTimeMillis();
         while(true) {
             TCPPackage receivePackage = null;
             try {
@@ -62,10 +65,14 @@ public class ReceiveThread implements Runnable {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+                System.out.println("\n[Success] Receive File.");
                 break;
             }
             if(receivePackage.Seq() == expectedSeqNum) {
                 rwnd--;
+                System.out.print("\rSeep: " + expectedSeqNum*1024/(System.currentTimeMillis() - startTime + 1) + "KB/s, Finished: "
+                        +  String.format("%.2f", ((float)(expectedSeqNum-1) * 100/(float) packageTotal))+ "%"
+                        + ", in " + (System.currentTimeMillis() - startTime + 1)/1000 + "s");
                 datas.add(receivePackage.Data());
                 replyACK = new TCPPackage(expectedSeqNum, false, 0, true, Convert.intToByteArray(rwnd));
                 expectedSeqNum++;

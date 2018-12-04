@@ -1,10 +1,7 @@
-package service;
+package com.cookieschen.course.lftp.service;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.util.Random;
 
 public class NetSocket {
     public static DatagramSocket getFreePort() {

@@ -1,4 +1,4 @@
-package service;
+package com.cookieschen.course.lftp.service;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
