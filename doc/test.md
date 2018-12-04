@@ -55,6 +55,12 @@ $ java -jar -a lsend -i localhost -f test.zip
   * ip：134.175.21.212
   * 带宽：1M
 
+**下载文件**
+
+![Internet-3](img/Internet-3.png)
+
+传输ppt.zip，哈希在并行获取时一并检测。
+
 **并行获取：**
 
 ![Internet-1](img/Internet-1.png)
@@ -62,6 +68,8 @@ $ java -jar -a lsend -i localhost -f test.zip
 将服务器的文件拉取到本地后用FC进行校验
 
 ![Internet-2](img/Internet-2.png)
+
+没有找到差异，说明文件成功在互联网下传输。
 
 ## 大文件传输
 
@@ -85,4 +93,16 @@ $ java -jar -a lsend -i localhost -f test.zip
 
 ![big-file-3](img/big-file-3.png)
 
-md5哈希值一致，大文件传输测试成功，因为文件分块，读入内存中的数据不会过度使用堆内存，不然会出现OOM
+md5哈希值一致，大文件传输测试成功，因为文件分块，读入内存中的数据不会过度使用堆内存，不然会出现OOM，内存占用也不会太大。
+
+##拥塞控制测试
+
+因为在两台服务器上速率过低，无法查看区别，因此在局域网中测试
+
+![CS-2](img/CS-2.png)
+
+![CS-1](img/CS-1.png)
+
+![CS-3](img/CS-3.png)
+
+可以看到，`client1`的传输速度大概为8M，当`client`参与传输之后，带宽逐渐被`client1`和`client`均分，因为拥塞控制是加性增乘性减，因此两者带宽会趋近于相等，从图中就可以明显看出。

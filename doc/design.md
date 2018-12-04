@@ -93,7 +93,7 @@ public class TCPPackage implements Serializable {
 
 * 服务器监听端口（9090）。
 * 客户端发送请求连接报文，包含客户端动作(GET or SEND)。
-* 服务器接受请求报文，并且返回一个可用端口给客户端。
+* 服务器接受请求报文，并且返回一个`可用端口`给客户端。
 * 根据客户端动作进行以下操作：
   * SEND：客户端开启发送线程，服务器开启接受线程。
   * GET：客户端开启接受线程，服务器开启发送线程。
@@ -103,6 +103,8 @@ public class TCPPackage implements Serializable {
 ![structure-3](img/structure-3.png)
 
 **GBN实现**：
+
+维护一个窗口，
 
 * `SendThread`：发送线程,维护`base`和`nextseqnum`，每次发送一个包`nextseqnum++`。
   * `ReceiveACKThread`：接受ACK包线程，每次更新`base=ACK+1`，表示当前已发送但未确认的序号。
@@ -124,16 +126,18 @@ public class TCPPackage implements Serializable {
 
 ### 拥塞控制
 
-发送方在拥塞控制只有两个状态，慢启动和拥塞避免。
-
 * 慢启动状态：
   * cwnd递增，如果接收的是冗余ACK包，`duplickACK`增加，否则更新`lastACK`
   * 如果超过阈值`ssthresh` ，则进入拥塞避免状态。
   * 冗余ACK包数量等于3时，进入拥塞避免状态。
 * 拥塞避免状态：
   * 如果接收的是冗余ACK包，`duplickACK`增加， 否则`cwnd = 1 / cwnd`。
+* 快速重传状态：
+  * 如果接收的是冗余ACK包，`cwnd`增加，否则进入拥塞避免状态。
 * 超时：
   * 超时之后，阈值`ssthresh = cwnd/2`，`cwnd = 1`，并且进入慢启动状态。
+
+![CC](C:\Users\cookieschen\Desktop\lftp\doc\img\CC.jpg)
 
 ### 多用户
 
@@ -143,4 +147,5 @@ public class TCPPackage implements Serializable {
 
 ### 大文件处理
 
-数据分块，每次读取10MB的数据，并且需要等待发送线程把数据发送完成，再取下一块数据。
+数据分块，每次读取10MB的数据，并且需要等待发送线程把数据发送完成，再取下一块数据，使用Java的`FileInputStream`和`FileOutputStream`，使用`skip`跳过特定的字节数，因为skip设计的缺陷，跳过的字节数大概只能支持2GB，超过这个范围，就会反馈文件头试图移动到开头的异常，因此需要分开几次进行跳过。
+

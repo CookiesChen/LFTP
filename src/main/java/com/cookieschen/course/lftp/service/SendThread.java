@@ -129,8 +129,8 @@ public class SendThread implements Runnable{
                     break;
                 }
                 System.out.print("\rSeep: " + (lastACK + 1)*1024/(System.currentTimeMillis() - startTime + 1) + "KB/s, Finished: "
-                            +  String.format("%.2f", ((float)(lastACK+1)/(float) packageTotal * 100)) + "%"
-                            + ", in " + (System.currentTimeMillis() - startTime + 1)/1000 + "s");
+                        +  String.format("%.2f", ((float)(lastACK+1)/(float) packageTotal * 100)) + "%"
+                        + ", in " + (System.currentTimeMillis() - startTime + 1)/1000 + "s");
                 if (lastACK + 1 == ACKPackage.ACK()) {
                     if (state == SLOW_START) {
                         cwnd++;
@@ -162,7 +162,7 @@ public class SendThread implements Runnable{
 
     class TimeOut implements Runnable{
 
-        private long TTL = 300;
+        private long TTL = 200;
 
         @Override
         public void run() {
