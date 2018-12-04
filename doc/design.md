@@ -137,7 +137,7 @@ public class TCPPackage implements Serializable {
 * 超时：
   * 超时之后，阈值`ssthresh = cwnd/2`，`cwnd = 1`，并且进入慢启动状态。
 
-![CC](C:\Users\cookieschen\Desktop\lftp\doc\img\CC.jpg)
+![CC](img/cc.jpg)
 
 ### 多用户
 
