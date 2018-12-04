@@ -53,7 +53,7 @@ public class SendThread implements Runnable{
     @Override
     public void run() {
 
-        String path = "./out/" + filename;
+        String path = "./" + filename;
         packageTotal = FileIO.getPackageTotal(path);
         bytesTotal = FileIO.getByteTotal(path);
 
