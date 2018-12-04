@@ -26,7 +26,7 @@ $ java -jar -a lget -i localhost -f 1.avi
 
 ![WLAN-3](img/WLAN-3.png)
 
-文件哈希一样，说明文件成功传输。
+文件md5哈希一致，说明接收文件成功。
 
 #### 发送文件
 
@@ -43,6 +43,12 @@ $ java -jar -a lsend -i localhost -f test.zip
 **客户端：**
 
 ![WLAN-5](img/WLAN-5.png)
+
+比对一下md5哈希
+
+![WLAN-6](img/WLAN-6.png)
+
+文件md5哈希一致，说明文件成功传输。
 
 ## 跨互联网测试
 
@@ -67,7 +73,7 @@ $ java -jar -a lsend -i localhost -f test.zip
 
 将服务器的文件拉取到本地后用FC进行校验
 
-![Internet-2](img/Internet-2.png)
+![Internet-4](img/Internet-4.png)
 
 没有找到差异，说明文件成功在互联网下传输。
 
