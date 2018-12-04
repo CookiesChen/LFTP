@@ -12,11 +12,13 @@
 ## 实验环境
 
 * OS：`Windows 10`
-* language: `Java`
+* language: `Java`，`jdk 1.8`
 
 ## 设计说明
 
 ### 使用
+
+命令行使用`picocli`实现
 
 客户端支持命令参数
 

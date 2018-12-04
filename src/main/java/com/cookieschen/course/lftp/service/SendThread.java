@@ -169,9 +169,9 @@ public class SendThread implements Runnable{
             while(true){
                 if (base >= packageTotal - 1) break;
                 if(System.currentTimeMillis() - time > TTL){
-//                    ssthresh = cwnd/2 + 1;
-//                    cwnd = ssthresh;
-//                    state = SLOW_START;
+                    ssthresh = cwnd/2 + 1;
+                    cwnd = ssthresh;
+                    state = SLOW_START;
                     ReSend = true;
                     // 重发数据包
                     int start = base;
@@ -191,5 +191,4 @@ public class SendThread implements Runnable{
             }
         }
     }
-
 }
