@@ -41,7 +41,7 @@ public class Main {
             return;
         }
         if (action == ACTION_SEND) {
-            packageTotal = (int) FileIO.getPackageTotal("./out/" + filename);
+            packageTotal = (int) FileIO.getPackageTotal("./" + filename);
         }
         information = filename + "/" + packageTotal;
         datagramSocket = NetSocket.getFreePort();

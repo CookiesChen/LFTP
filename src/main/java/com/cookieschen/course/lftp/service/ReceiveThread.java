@@ -39,7 +39,7 @@ public class ReceiveThread implements Runnable {
         TCPPackage replyACK = null;
         FileOutputStream outputStream = null;
         try {
-            outputStream  = new FileOutputStream(new File("./out/test/" + filename));
+            outputStream  = new FileOutputStream(new File("./" + filename));
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
@@ -71,7 +71,7 @@ public class ReceiveThread implements Runnable {
             if(receivePackage.Seq() == expectedSeqNum) {
                 rwnd--;
                 System.out.print("\rSeep: " + expectedSeqNum*1024/(System.currentTimeMillis() - startTime + 1) + "KB/s, Finished: "
-                        +  String.format("%.2f", ((float)(expectedSeqNum-1) * 100/(float) packageTotal))+ "%"
+                        +  String.format("%.2f", ((float)(expectedSeqNum+1)/(float) packageTotal * 100)) + "%"
                         + ", in " + (System.currentTimeMillis() - startTime + 1)/1000 + "s");
                 datas.add(receivePackage.Data());
                 replyACK = new TCPPackage(expectedSeqNum, false, 0, true, Convert.intToByteArray(rwnd));

@@ -28,7 +28,7 @@ public class Main {
             String filename = informations[0];
             int packageTotal = Integer.parseInt(informations[1]);
             if (clientAction.action() == ACTION_GET){
-                packageTotal = (int) FileIO.getPackageTotal("./out/test/" + filename);
+                packageTotal = (int) FileIO.getPackageTotal("./" + filename);
             }
             DatagramSocket datagramSocket = NetSocket.getFreePort();
             information = new String(Integer.toString(datagramSocket.getLocalPort()) + '/' + packageTotal);

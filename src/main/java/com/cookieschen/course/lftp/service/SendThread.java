@@ -26,7 +26,7 @@ public class SendThread implements Runnable{
     private static final int SLOW_START = 0;        // 慢启动
     private static final int CONGESTION_AVOID = 1;  // 拥塞避免
     private volatile int state = SLOW_START;        // 拥塞控制状态
-    private double cwnd = 1.0;               // 拥塞窗口
+    private double cwnd = 10;               // 拥塞窗口
     private volatile int lastACK = -1;               // 最后确认ACK
     private volatile int duplicateACK = 0;          // 冗余ACK
     private volatile double ssthresh = 50;                   // 慢启动阈值
@@ -71,7 +71,7 @@ public class SendThread implements Runnable{
                 datas.add(new TCPPackage(0, false, blockCur*BLOCK_PACKAGE_NUM + j, true, byteList.get(j)));
             }
             while(nextseqnum < datas.size() + blockCur * BLOCK_PACKAGE_NUM) {
-                if(ReSend == false && nextseqnum < base + cwnd) {
+                if(!ReSend && nextseqnum < base + cwnd) {
                     TCPPackage tcpPackage;
                     if (rwnd <= 0){
                         tcpPackage = new TCPPackage(0, false, -1, ACTION_SEND, null);
@@ -128,10 +128,10 @@ public class SendThread implements Runnable{
                     System.out.println("[Client] Send finish. Close in 10s");
                     break;
                 }
-                if (lastACK + 1 == ACKPackage.ACK()) {
-                    System.out.print("\rSeep: " + (lastACK + 1)*1024/(System.currentTimeMillis() - startTime + 1) + "KB/s, Finished: "
+                System.out.print("\rSeep: " + (lastACK + 1)*1024/(System.currentTimeMillis() - startTime + 1) + "KB/s, Finished: "
                             +  String.format("%.2f", ((float)(lastACK+1)/(float) packageTotal * 100)) + "%"
                             + ", in " + (System.currentTimeMillis() - startTime + 1)/1000 + "s");
+                if (lastACK + 1 == ACKPackage.ACK()) {
                     if (state == SLOW_START) {
                         cwnd++;
                         if (cwnd > ssthresh) state = CONGESTION_AVOID;
@@ -169,9 +169,9 @@ public class SendThread implements Runnable{
             while(true){
                 if (base >= packageTotal - 1) break;
                 if(System.currentTimeMillis() - time > TTL){
-                    ssthresh = cwnd/2 + 1;
-                    cwnd = ssthresh;
-                    state = SLOW_START;
+//                    ssthresh = cwnd/2 + 1;
+//                    cwnd = ssthresh;
+//                    state = SLOW_START;
                     ReSend = true;
                     // 重发数据包
                     int start = base;
